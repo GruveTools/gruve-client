@@ -197,10 +197,6 @@ gruve_do_install() {
 
   command ~/gruve-client --setup "${PROFILE_INSTALL_DIR}/"
 
-  echo "=> Adding web dashboard server to start up, ethos user password required..."
-  command sudo sed -i 's/exit 0/su - ethos -c "screen -dm -S web php -S 0.0.0.0:8080 -t \/home\/ethos\/gruve-client\/web\/"\n\nexit 0/' /etc/rc.local
-  command screen -dm -S web php -S 0.0.0.0:8080 -t /home/ethos/gruve-client/web/
-
   # Source Gruve
   # shellcheck source=/dev/null
   #\. "$(gruve_install_dir)/gruve-client"
