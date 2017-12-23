@@ -1,5 +1,6 @@
-.autominer/
+.gruve/
 scripts/
 configs/
+data/
 config.php
 local.conf
