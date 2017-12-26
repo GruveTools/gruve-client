@@ -42,20 +42,20 @@ class Database
      *
      * @var array
      */
-    protected $fileAccessMode = array(
-        self::FILE_READ => array(
+    protected $fileAccessMode = [
+        self::FILE_READ => [
             'mode' => 'rb',
             'operation' => LOCK_SH,
-        ),
-        self::FILE_WRITE => array(
+        ],
+        self::FILE_WRITE => [
             'mode' => 'wb',
             'operation' => LOCK_EX,
-        ),
-        self::FILE_APPEND => array(
+        ],
+        self::FILE_APPEND => [
             'mode' => 'ab',
             'operation' => LOCK_EX,
-        ),
-    );
+        ],
+    ];
 
     /**
      * Database name.
@@ -105,10 +105,7 @@ class Database
      */
     public function setName($name)
     {
-        if (empty($name) || !preg_match('/^[\w-]+$/', $name)) {
-            throw new Exception('Invalid characters in database name');
-        }
-
+        Validation::validateDatabaseName($name);
         $this->name = $name;
     }
 
@@ -151,7 +148,7 @@ class Database
      *
      * @return SplFileObject
      */
-    public function openFile($mode)
+    protected function openFile($mode)
     {
         $path = $this->getPath();
 
@@ -198,7 +195,7 @@ class Database
      *
      * @throws Exception
      */
-    public function closeFile(SplFileObject &$file)
+    protected function closeFile(SplFileObject &$file)
     {
         if (!$this->getConfig()->useGzip() && !$file->flock(LOCK_UN)) {
             $file = null;
@@ -206,5 +203,61 @@ class Database
         }
 
         $file = null;
+    }
+
+    /**
+     * Read lines from the database file.
+     *
+     * @return \Generator
+     */
+    public function readFromFile()
+    {
+        $file = $this->openFile(static::FILE_READ);
+
+        try {
+            foreach ($file as $line) {
+                yield new Line($line);
+            }
+        } finally {
+            $this->closeFile($file);
+        }
+    }
+
+    /**
+     * Append a line to the database file.
+     *
+     * @param string $line
+     */
+    public function appendToFile($line)
+    {
+        $file = $this->openFile(static::FILE_APPEND);
+        $file->fwrite($line);
+        $this->closeFile($file);
+    }
+
+    /**
+     * Flush the database file.
+     */
+    public function flushFile()
+    {
+        $file = $this->openFile(static::FILE_WRITE);
+        $this->closeFile($file);
+    }
+
+    /**
+     * Write temporary file contents to database file.
+     *
+     * @param SplTempFileObject $tmpFile
+     */
+    public function writeTempToFile(SplTempFileObject &$tmpFile)
+    {
+        $file = $this->openFile(static::FILE_WRITE);
+
+        foreach ($tmpFile as $line) {
+            $file->fwrite($line);
+        }
+
+        $this->closeFile($file);
+        $tmpFile = null;
     }
 }
