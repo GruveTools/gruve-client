@@ -195,7 +195,7 @@ gruve_do_install() {
     echo "=> Gruve already in crontab"
   fi
 
-  command /home/ethos/gruve-client/gruve-client --setup "${PROFILE_INSTALL_DIR}/"
+  command cd /home/ethos/gruve-client ; ./gruve-client --setup "${PROFILE_INSTALL_DIR}/"
 
   # Source Gruve
   # shellcheck source=/dev/null
