@@ -19,7 +19,7 @@ $options = [];
 for ($i = 0; $i < count($argv); $i++) {
     if ($argv[$i] == '--setup') {
         $setup = $argv[$i+1];
-        $gruve->setup($setup);
+        $this->setup($setup);
     }
     if ($argv[$i] == '--dry-run') {
         $options['dry_run'] = true;
