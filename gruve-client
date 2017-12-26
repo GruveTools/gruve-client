@@ -19,7 +19,6 @@ $options = [];
 for ($i = 0; $i < count($argv); $i++) {
     if ($argv[$i] == '--setup') {
         $setup = $argv[$i+1];
-        $this->setup($setup);
     }
     if ($argv[$i] == '--dry-run') {
         $options['dry_run'] = true;
@@ -50,5 +49,9 @@ for ($i = 0; $i < count($argv); $i++) {
 }
 
 $gruve = new Gruve($options);
+
+if (!empty($setup)) {
+    $gruve->setup($setup);
+}
 
 $gruve->coin_check();
