@@ -7,61 +7,59 @@ class FlintstoneTest extends PHPUnit_Framework_TestCase
 {
     public function testGetDatabaseAndConfig()
     {
-        $db = new Flintstone('test', [
+        $db = new Flintstone('test', array(
             'dir' => __DIR__,
             'cache' => false,
-        ]);
+        ));
 
-        $this->assertInstanceOf(\Flintstone\Database::class, $db->getDatabase());
-        $this->assertInstanceOf(\Flintstone\Config::class, $db->getConfig());
+        $this->assertInstanceOf('Flintstone\Database', $db->getDatabase());
+        $this->assertInstanceOf('Flintstone\Config', $db->getConfig());
     }
 
     /**
-     * @expectedException \Flintstone\Exception
-     * @expectedExceptionMessage Invalid characters in key
+     * @expectedException Flintstone\Exception
      */
     public function testKeyInvalidName()
     {
-        $db = new Flintstone('test', []);
+        $db = new Flintstone('test', array());
         $db->get('test!123');
     }
 
     /**
-     * @expectedException \Flintstone\Exception
-     * @expectedExceptionMessage Invalid data type
+     * @expectedException Flintstone\Exception
      */
     public function testKeyInvalidData()
     {
-        $db = new Flintstone('test', []);
+        $db = new Flintstone('test', array());
         $db->set('test', new self());
     }
 
     public function testOperations()
     {
-        $this->runOperationsTests([
+        $this->runOperationsTests(array(
             'dir' => __DIR__,
             'cache' => false,
             'gzip' => false,
-        ]);
+        ));
 
-        $this->runOperationsTests([
+        $this->runOperationsTests(array(
             'dir' => __DIR__,
             'cache' => true,
             'gzip' => true,
-        ]);
+        ));
 
-        $this->runOperationsTests([
+        $this->runOperationsTests(array(
             'dir' => __DIR__,
             'cache' => false,
             'gzip' => false,
             'formatter' => new JsonFormatter(),
-        ]);
+        ));
     }
 
     protected function runOperationsTests($config)
     {
         $db = new Flintstone('test', $config);
-        $arr = ['foo' => "new\nline"];
+        $arr = array('foo' => "new\nline");
 
         $this->assertFalse($db->get('foo'));
 

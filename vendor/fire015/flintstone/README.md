@@ -21,7 +21,7 @@ For full documentation please visit http://www.xeweb.net/flintstone/
 The easiest way to install Flintstone is via [composer](http://getcomposer.org/). Run the following command to install it.
 
 ```
-composer require fire015/flintstone
+php composer.phar require fire015/flintstone
 ```
 
 ```php
@@ -30,12 +30,13 @@ require 'vendor/autoload.php';
 
 use Flintstone\Flintstone;
 
-$users = new Flintstone('users', ['dir' => '/path/to/database/dir/']);
+$users = new Flintstone('users', array('dir' => '/path/to/database/dir/'));
 ```
 
 ### Requirements
 
-- PHP 5.6+
+- Any flavour of PHP 5.3+ should do
+- [optional] PHPUnit to execute the test suite
 
 ### Data types
 
@@ -45,7 +46,6 @@ Flintstone can store the following data types:
 * Integers
 * Floats
 * Arrays
-* Null
 
 ### Options
 
@@ -62,18 +62,16 @@ Flintstone can store the following data types:
 ### Usage examples
 
 ```php
-<?php
-
 // Set options
-$options = ['dir' => '/path/to/database/dir/'];
+$options = array('dir' => '/path/to/database/dir/');
 
 // Load the databases
 $users = new Flintstone('users', $options);
 $settings = new Flintstone('settings', $options);
 
 // Set keys
-$users->set('bob', ['email' => 'bob@site.com', 'password' => '123456']);
-$users->set('joe', ['email' => 'joe@site.com', 'password' => 'test']);
+$users->set('bob', array('email' => 'bob@site.com', 'password' => '123456'));
+$users->set('joe', array('email' => 'joe@site.com', 'password' => 'test'));
 $settings->set('site_offline', 1);
 $settings->set('site_back', '3 days');
 
@@ -83,17 +81,17 @@ echo 'Bob, your email is ' . $user['email'];
 
 $offline = $settings->get('site_offline');
 if ($offline == 1) {
-    echo 'Sorry, the website is offline<br />';
-    echo 'We will be back in ' . $settings->get('site_back');
+	echo 'Sorry, the website is offline<br />';
+	echo 'We will be back in ' . $settings->get('site_back');
 }
 
 // Retrieve all key names
 $keys = $users->getKeys(); // returns array('bob', 'joe', ...)
 
 foreach ($keys as $username) {
-    $user = $users->get($username);
-    echo $username.', your email is ' . $user['email'];
-    echo $username.', your password is ' . $user['password'];
+	$user = $users->get($username);
+	echo $username.', your email is ' . $user['email'];
+	echo $username.', your password is ' . $user['password'];
 }
 
 // Delete a key
@@ -117,10 +115,10 @@ require 'vendor/autoload.php';
 use Flintstone\Flintstone;
 use Flintstone\Formatter\JsonFormatter;
 
-$users = new Flintstone('users', [
-    'dir' => __DIR__,
-    'formatter' => new JsonFormatter()
-]);
+$users = new Flintstone('users', array(
+	'dir' => __DIR__,
+	'formatter' => new JsonFormatter
+));
 ```
 
 ### Changing the cache

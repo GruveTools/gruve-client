@@ -18,7 +18,7 @@ class ArrayCache implements CacheInterface
      *
      * @var array
      */
-    protected $cache = [];
+    protected $cache = array();
 
     /**
      * {@inheritdoc}
@@ -57,6 +57,6 @@ class ArrayCache implements CacheInterface
      */
     public function flush()
     {
-        $this->cache = [];
+        $this->cache = array();
     }
 }

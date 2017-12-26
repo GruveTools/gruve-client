@@ -18,7 +18,7 @@ class Flintstone
      *
      * @var string
      */
-    const VERSION = '2.1.1';
+    const VERSION = '2.0';
 
     /**
      * Database class.
@@ -104,7 +104,7 @@ class Flintstone
      */
     public function get($key)
     {
-        Validation::validateKey($key);
+        $this->validateKey($key);
 
         // Fetch the key from cache
         if ($cache = $this->getConfig()->getCache()) {
@@ -114,16 +114,19 @@ class Flintstone
         }
 
         // Fetch the key from database
-        $file = $this->getDatabase()->readFromFile();
+        $filePointer = $this->getDatabase()->openFile(Database::FILE_READ);
         $data = false;
 
-        foreach ($file as $line) {
-            /** @var Line $line */
-            if ($line->getKey() == $key) {
-                $data = $this->decodeData($line->getData());
+        foreach ($filePointer as $line) {
+            $data = $this->getDataFromLine($line, $key);
+
+            if ($data !== false) {
+                $data = $this->decodeData($data);
                 break;
             }
         }
+
+        $this->getDatabase()->closeFile($filePointer);
 
         // Save the data to cache
         if ($cache && $data !== false) {
@@ -141,17 +144,20 @@ class Flintstone
      */
     public function set($key, $data)
     {
-        Validation::validateKey($key);
-        Validation::validateData($data);
+        $this->validateKey($key);
+        $this->validateData($data);
 
         // If the key already exists we need to replace it
         if ($this->get($key) !== false) {
             $this->replace($key, $data);
+
             return;
         }
 
         // Write the key to the database
-        $this->getDatabase()->appendToFile($this->getLineString($key, $data));
+        $filePointer = $this->getDatabase()->openFile(Database::FILE_APPEND);
+        $filePointer->fwrite($this->getLineString($key, $data));
+        $this->getDatabase()->closeFile($filePointer);
 
         // Delete the key from cache
         if ($cache = $this->getConfig()->getCache()) {
@@ -166,7 +172,7 @@ class Flintstone
      */
     public function delete($key)
     {
-        Validation::validateKey($key);
+        $this->validateKey($key);
 
         if ($this->get($key) !== false) {
             $this->replace($key, false);
@@ -178,7 +184,8 @@ class Flintstone
      */
     public function flush()
     {
-        $this->getDatabase()->flushFile();
+        $filePointer = $this->getDatabase()->openFile(Database::FILE_WRITE);
+        $this->getDatabase()->closeFile($filePointer);
 
         // Flush the cache
         if ($cache = $this->getConfig()->getCache()) {
@@ -193,13 +200,14 @@ class Flintstone
      */
     public function getKeys()
     {
-        $keys = [];
-        $file = $this->getDatabase()->readFromFile();
+        $keys = array();
+        $filePointer = $this->getDatabase()->openFile(Database::FILE_READ);
 
-        foreach ($file as $line) {
-            /** @var Line $line */
-            $keys[] = $line->getKey();
+        foreach ($filePointer as $line) {
+            $keys[] = $this->getKeyFromLine($line);
         }
+
+        $this->getDatabase()->closeFile($filePointer);
 
         return $keys;
     }
@@ -211,13 +219,15 @@ class Flintstone
      */
     public function getAll()
     {
-        $data = [];
-        $file = $this->getDatabase()->readFromFile();
+        $data = array();
+        $filePointer = $this->getDatabase()->openFile(Database::FILE_READ);
 
-        foreach ($file as $line) {
-            /** @var Line $line */
-            $data[$line->getKey()] = $this->decodeData($line->getData());
+        foreach ($filePointer as $line) {
+            $pieces = $this->getLinePieces($line);
+            $data[$pieces[0]] = $this->decodeData($pieces[1]);
         }
+
+        $this->getDatabase()->closeFile($filePointer);
 
         return $data;
     }
@@ -231,29 +241,107 @@ class Flintstone
     protected function replace($key, $data)
     {
         // Write a new database to a temporary file
-        $tmpFile = $this->getDatabase()->openTempFile();
-        $file = $this->getDatabase()->readFromFile();
+        $tmp = $this->getDatabase()->openTempFile();
+        $filePointer = $this->getDatabase()->openFile(Database::FILE_READ);
 
-        foreach ($file as $line) {
-            /** @var Line $line */
-            if ($line->getKey() == $key) {
+        foreach ($filePointer as $line) {
+            $lineKey = $this->getKeyFromLine($line);
+
+            if ($lineKey == $key) {
                 if ($data !== false) {
-                    $tmpFile->fwrite($this->getLineString($key, $data));
+                    $tmp->fwrite($this->getLineString($key, $data));
                 }
             } else {
-                $tmpFile->fwrite($line->getLine() . "\n");
+                $tmp->fwrite($line . "\n");
             }
         }
 
-        $tmpFile->rewind();
+        $this->getDatabase()->closeFile($filePointer);
+        $tmp->rewind();
 
         // Overwrite the database with the temporary file
-        $this->getDatabase()->writeTempToFile($tmpFile);
+        $filePointer = $this->getDatabase()->openFile(Database::FILE_WRITE);
+
+        foreach ($tmp as $line) {
+            $filePointer->fwrite($line);
+        }
+
+        $this->getDatabase()->closeFile($filePointer);
+        $tmp = null;
 
         // Delete the key from cache
         if ($cache = $this->getConfig()->getCache()) {
             $cache->delete($key);
         }
+    }
+
+    /**
+     * Validate the key.
+     *
+     * @param string $key
+     *
+     * @throws Exception
+     */
+    protected function validateKey($key)
+    {
+        if (empty($key) || !preg_match('/^[\w-]+$/', $key)) {
+            throw new Exception('Invalid characters in key');
+        }
+    }
+
+    /**
+     * Check the data type is valid.
+     *
+     * @param mixed $data the data
+     *
+     * @throws Exception
+     */
+    protected function validateData($data)
+    {
+        if (!is_string($data) && !is_int($data) && !is_float($data) && !is_array($data)) {
+            throw new Exception('Invalid data type');
+        }
+    }
+
+    /**
+     * Retrieve the pieces from a given line.
+     *
+     * @param string $line
+     *
+     * @return array
+     */
+    protected function getLinePieces($line)
+    {
+        return explode('=', $line, 2);
+    }
+
+    /**
+     * Retrieve data from a given line for a specific key.
+     *
+     * @param string $line
+     * @param string $key
+     *
+     * @return string|bool
+     */
+    protected function getDataFromLine($line, $key)
+    {
+        $pieces = $this->getLinePieces($line);
+
+        return ($pieces[0] == $key) ? $pieces[1] : false;
+    }
+
+    /**
+     * Retrieve key from a given line.
+     *
+     * @param string $line
+     *
+     * @return string
+     */
+    protected function getKeyFromLine($line)
+    {
+        $pieces = $this->getLinePieces($line);
+
+        return $pieces[0];
     }
 
     /**

@@ -1,6 +1,6 @@
 {
     "require": {
-        "fire015/flintstone": "^2.1",
+        "fire015/flintstone": "^2.0",
         "paragonie/random_compat": "^2.0"
     }
 }
