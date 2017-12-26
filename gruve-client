@@ -1,9 +1,5 @@
 #!/usr/bin/env php
 <?php
-$CWD = getcwd();
-
-echo $CWD . "\n";
-
 require_once('includes/class.gruve.php');
 
 if (!empty(getenv('PUSHBULLET_TOKEN'))) {
